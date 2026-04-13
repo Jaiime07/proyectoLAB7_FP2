@@ -1,0 +1,43 @@
+Escalada de Colinas: 
+
+Imagina que estás en la montaña con los ojos vendados y quieres llegar
+al valle más bajo (mínimo). Das un pequeño paso en una dirección al azar 
+(generas un "vecino"). Si ese paso te lleva más abajo, te mueves ahí. 
+Si te lleva más arriba, te quedas donde estás y pruebas otra dirección.
+
+
+Recocido Simulado: 
+
+Es similar al anterior, pero con un truco para no quedarse atascado en 
+un "bache" (mínimo local). Al principio, tiene una "temperatura" alta que 
+le permite aceptar pasos hacia arriba (peores soluciones) con cierta 
+probabilidad calculada mediante P = e^{-\Delta / T}. A medida que avanza, 
+la temperatura baja (se "enfría") y se vuelve más estricto, comportándose 
+como una Escalada de Colinas normal.
+diferencia ($\Delta E$): Cuanto peor sea la solución nueva 
+(diferencia más grande), menor es la probabilidad de aceptarla.
+
+*Temperatura (T): 
+Al principio, la temperatura es alta, por lo que el resultado de la 
+exponencial es cercano a 1. El algoritmo es "valiente" y acepta casi 
+cualquier cosa para explorar el terreno.
+Al final, la temperatura es baja, 
+por lo que la probabilidad es casi 0. El algoritmo se vuelve "conservador" 
+y solo acepta mejoras, puliendo la solución encontrada.
+
+Imagina que la fórmula math.exp(-diferencia / temperatura) da como resultado 0.7. 
+Eso significa que tienes un 70% de probabilidades de aceptar ese movimiento aunque 
+sea malo.
+
+Pero, ¿cómo le dices a la computadora que haga algo el 70% de las veces?
+
+Lanzas un dado (o generas un número aleatorio entre 0 y 1).
+
+Si el número cae entre 0 y 0.7, aceptas.
+
+Si cae entre 0.7 y 1, rechazas.
+
+Sin el np.random.rand(), no podrías ejecutar ese "margen de riesgo"
+
+
+
