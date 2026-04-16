@@ -11,13 +11,12 @@ class AfinadorParametros:
     
     def __init__(self, presupuesto_por_prueba: int) -> None:
         """
-        Inicializa el afinador.
-        
         Args:
             presupuesto_por_prueba (int): Número de evaluaciones que se gastarán 
                                           evaluando cada combinación de parámetros.
         """
         self.presupuesto_por_prueba: int = presupuesto_por_prueba
+
 
     def buscar_mejores_parametros(self, clase_algoritmo: Type[AlgoritmoOptimizacion], 
                                   funcion: Any, 
@@ -35,6 +34,7 @@ class AfinadorParametros:
         Returns:
             Dict[str, Any]: Diccionario con la mejor combinación de parámetros.
         """
+
         mejores_parametros: Dict[str, Any] = {}
         mejor_valor_global: float = float('inf')
 
@@ -47,18 +47,15 @@ class AfinadorParametros:
             # Emparejamos los nombres con la combinación actual (ej. {'tamano_paso': 0.1})
             configuracion_actual: Dict[str, Any] = dict(zip(nombres_parametros, combinacion))
             
-            # Instanciamos el algoritmo pasando los parámetros desempaquetados (**kwargs)
+            # Instanciamos el algoritmo pasando los parámetros desempaquetados 
             algoritmo: AlgoritmoOptimizacion = clase_algoritmo(**configuracion_actual)
             
             # Ejecutamos el algoritmo para probar qué tan buena es esta configuración
-            # OJO: No reiniciamos el contador de la función aquí, porque estas llamadas 
-            # también consumen nuestro presupuesto global de 10.000.
             _, mejor_valor = algoritmo.ejecutar(
                 funcion=funcion, 
                 presupuesto=self.presupuesto_por_prueba
             )
             
-            # Si esta configuración es mejor que las anteriores, la guardamos
             if mejor_valor < mejor_valor_global:
                 mejor_valor_global = mejor_valor
                 mejores_parametros = configuracion_actual
