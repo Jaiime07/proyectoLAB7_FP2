@@ -42,8 +42,8 @@ class AfinadorParametros:
         nombres_parametros: List[str] = list(grid_parametros.keys())
         valores_parametros: List[List[Any]] = list(grid_parametros.values())
 
-        # itertools.product genera el producto cartesiano (todas las combinaciones posibles)
-        for combinacion in itertools.product(*valores_parametros):
+        # itertools.product hace producto cartesiano
+        for combinacion in itertools.product(*valores_parametros): # * para unpacking
             # Emparejamos los nombres con la combinación actual (ej. {'tamano_paso': 0.1})
             configuracion_actual: Dict[str, Any] = dict(zip(nombres_parametros, combinacion))
             
