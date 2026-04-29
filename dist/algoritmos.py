@@ -270,3 +270,57 @@ class BusquedaLocalReiterada(AlgoritmoOptimizacion):
                 intentos_sin_mejora = 0
                     
         return mejor_solucion_global, mejor_valor_global
+    
+
+
+class EscaladaColinasDinamica(AlgoritmoOptimizacion):
+    """
+    NUEVO LAB 8: Escalada de Colinas con tamaño de paso dinámico.
+    El tamaño del salto se reduce proporcionalmente a medida que se agota el presupuesto.
+    """
+
+    def __init__(self, paso_inicial: float = 2.0, paso_final: float = 0.01) -> None:
+        """
+        Inicializa el algoritmo dinámico.
+        
+        Args:
+            paso_inicial (float): Tamaño del salto al principio (exploración amplia).
+            paso_final (float): Tamaño del salto al final (explotación fina).
+        """
+        super().__init__(nombre=f"Escalada Colinas Dinámica (Paso: {paso_inicial} -> {paso_final})")
+        self.paso_inicial: float = paso_inicial
+        self.paso_final: float = paso_final
+
+    def generar_vecino(self, solucion_actual: np.ndarray, tamano_paso_actual: float) -> np.ndarray:
+        """NUEVO LAB 8: Genera un vecino usando el paso dinámico calculado."""
+        ruido = np.random.uniform(-tamano_paso_actual, tamano_paso_actual, size=solucion_actual.shape)
+        vecino = solucion_actual + ruido
+        return np.clip(vecino, self.limite_inferior, self.limite_superior)
+
+    def ejecutar(self, funcion: Any, presupuesto: int, dimensiones: int = 10) -> Tuple[np.ndarray, float]:
+        solucion_actual: np.ndarray = self.generar_punto_aleatorio(dimensiones)
+        valor_actual: float = funcion.evaluar(solucion_actual)
+        evaluaciones_gastadas: int = 1
+        
+        # NUEVO LAB 8: Guardamos el primer valor en nuestro historial
+        self.historial_convergencia.append(valor_actual)
+        
+        while evaluaciones_gastadas < presupuesto:
+            # NUEVO LAB 8: Cálculo del paso dinámico (Decaimiento lineal)
+            # Progreso va de 0.0 (inicio) a 1.0 (fin)
+            progreso: float = evaluaciones_gastadas / presupuesto
+            # El paso actual es una interpolación entre el inicial y el final
+            paso_actual: float = self.paso_inicial - (progreso * (self.paso_inicial - self.paso_final))
+            
+            candidato: np.ndarray = self.generar_vecino(solucion_actual, paso_actual)
+            valor_candidato: float = funcion.evaluar(candidato)
+            evaluaciones_gastadas += 1
+            
+            if valor_candidato < valor_actual:
+                solucion_actual = candidato
+                valor_actual = valor_candidato
+            
+            # NUEVO LAB 8: Añadimos el mejor valor conocido en este momento al historial
+            self.historial_convergencia.append(valor_actual)
+                
+        return solucion_actual, valor_actual

@@ -1,4 +1,5 @@
 # framework.py
+import csv
 import numpy as np
 from typing import Any, List, Dict, Type, Tuple
 from base import AlgoritmoOptimizacion
@@ -7,7 +8,7 @@ from afinador import AfinadorParametros
 class FrameworkComparacion:
     """
     Orquesta la ejecución de los experimentos, integra el afinado de parámetros
-    y recopila los resultados (incluyendo el vector solución) respetando el presupuesto.
+    y recopila los resultados (incluyendo vectores) respetando el presupuesto.
     """
 
     def __init__(self, funciones: List[Any], algoritmos: List[AlgoritmoOptimizacion], presupuesto_por_funcion: int = 10000) -> None:
@@ -15,10 +16,9 @@ class FrameworkComparacion:
         self.algoritmos_instanciados: List[AlgoritmoOptimizacion] = algoritmos
         self.presupuesto_por_funcion: int = presupuesto_por_funcion
         
-        # ACTULIZACIÓN: Ahora el diccionario guarda una Tupla con el vector (np.ndarray) y el valor (float)
+        # Guardamos el vector (np.ndarray) y el valor (float)
         self.resultados: Dict[str, Dict[str, Tuple[np.ndarray, float]]] = {}
         
-        # Configuración opcional para el Grid Search
         self.afinador: AfinadorParametros | None = None
         self.grids_parametros: Dict[str, Dict[str, List[Any]]] = {}
         self.clases_a_afinar: Dict[str, Type[AlgoritmoOptimizacion]] = {}
@@ -31,14 +31,19 @@ class FrameworkComparacion:
 
     def ejecutar_experimento(self) -> None:
         for i, funcion in enumerate(self.funciones, start=1):
-            nombre_funcion: str = f"Funcion_{i}"
+            # Extraemos el nombre real de la clase (ej. Funcion_5 o Funcion_8_modificada)
+            nombre_funcion: str = funcion.__class__.__name__
             self.resultados[nombre_funcion] = {}
             print(f"\n--- Optimizando {nombre_funcion} ---")
             
             for algoritmo_base in self.algoritmos_instanciados:
                 funcion.reiniciar_contador()
-                presupuesto_restante: int = self.presupuesto_por_funcion
                 
+                # Limpiamos el historial del algoritmo antes de evaluar
+                if hasattr(algoritmo_base, 'reiniciar_historial'):
+                    algoritmo_base.reiniciar_historial()
+                    
+                presupuesto_restante: int = self.presupuesto_por_funcion
                 nombre_clase: str = algoritmo_base.__class__.__name__
                 algoritmo_final: AlgoritmoOptimizacion = algoritmo_base
                 
@@ -56,16 +61,18 @@ class FrameworkComparacion:
                     
                     presupuesto_restante -= funcion.presupuesto_gastado
                     algoritmo_final = clase_alg(**mejores_params)
+                    
+                    if hasattr(algoritmo_final, 'reiniciar_historial'):
+                        algoritmo_final.reiniciar_historial()
+                        
                     print(f"  -> Mejores params: {mejores_params} (Presupuesto restante: {presupuesto_restante})")
                     
                 # Fase de Ejecución Final
-                # ACTUALIZACIÓN: Ahora sí recogemos 'mejor_vector' en lugar de usar '_'
                 mejor_vector, mejor_valor = algoritmo_final.ejecutar(
                     funcion=funcion, 
                     presupuesto=presupuesto_restante
                 )
                 
-                # Guardamos ambos datos en nuestro diccionario de resultados
                 self.resultados[nombre_funcion][algoritmo_final.nombre] = (mejor_vector, mejor_valor)
                 print(f"[{algoritmo_final.nombre}] Mejor valor final: {mejor_valor:.4f}")
 
@@ -78,12 +85,28 @@ class FrameworkComparacion:
         for nombre_func, resultados_algoritmos in self.resultados.items():
             print(f"\n{nombre_func}:")
             for nombre_alg, (vector, valor) in resultados_algoritmos.items():
-                
-                # Usamos np.array2string para dar un formato limpio al vector de 10 dimensiones
-                # precision=4: Muestra 4 decimales
-                # suppress_small=True: Convierte números extremadamente cercanos a 0 (ej. 1e-16) en 0.0
                 vector_formateado = np.array2string(vector, precision=4, suppress_small=True, separator=', ')
-                
                 print(f"  - {nombre_alg}:")
                 print(f"      Valor (f(x)): {valor:.6f}")
                 print(f"      Vector (x)  : {vector_formateado}")
+
+    def exportar_csv(self, nombre_archivo: str = "resultados_optimizacion.csv") -> None:
+        """
+        Exporta los resultados almacenados a un archivo CSV.
+        """
+        encabezados: List[str] = ["Funcion", "Algoritmo", "Valor_Minimo", "Vector_Coordenadas"]
+        
+        try:
+            with open(nombre_archivo, mode='w', newline='', encoding='utf-8') as archivo:
+                escritor = csv.writer(archivo)
+                escritor.writerow(encabezados)
+                
+                for nombre_func, dict_algs in self.resultados.items():
+                    for nombre_alg, (vector, valor) in dict_algs.items():
+                        vector_str: str = np.array2string(vector, separator=';').replace('\n', '')
+                        escritor.writerow([nombre_func, nombre_alg, f"{valor:.8f}", vector_str])
+            
+            print(f"\n[Éxito] Resultados exportados correctamente a: {nombre_archivo}")
+            
+        except IOError as e:
+            print(f"\n[Error] No se pudo escribir el archivo: {e}")
